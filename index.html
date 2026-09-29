@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VPS 剩余价值计算器 - 服务器转让剩余价值/溢价在线计算</title>
+<meta name="description" content="VPS 剩余价值计算器：按续费价格、付款周期与剩余天数折算服务器转让剩余价值，支持多币种实时汇率、溢价双向反推、Push 费与中介费分摊。">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1420;--card:#182032;--line:#26314a;--txt:#e8ecf4;--mut:#8b96ad;--acc:#ea580c;--acc2:#f59e0b;--ok:#22c55e;--blue:#38bdf8}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+.wrap{max-width:880px;margin:0 auto;padding:24px 16px 60px}
+header{text-align:center;padding:28px 0 8px}
+header h1{font-size:28px;letter-spacing:2px}
+header h1 span{color:var(--acc)}
+header p{color:var(--mut);font-size:12px;margin-top:8px;letter-spacing:3px}
+.counters{display:flex;justify-content:center;gap:28px;margin:14px 0 18px;font-size:13px;color:var(--mut)}
+.counters b{color:var(--txt);font-size:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+.card h2{font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h2 .n{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-size:12px;align-items:center;justify-content:center;font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:560px){.grid,.grid3{grid-template-columns:1fr}}
+.field label{display:block;font-size:12px;color:var(--mut);margin-bottom:6px}
+.field input,.field select{width:100%;background:#0f1626;border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:10px 12px;font-size:14px;outline:none}
+.field input:focus,.field select:focus{border-color:var(--acc)}
+.field input[readonly]{opacity:.55}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mt{margin-top:12px}
+.seg{display:inline-flex;background:#0f1626;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:none;background:transparent;color:var(--mut);padding:8px 14px;font-size:13px;cursor:pointer}
+.seg button.on{background:var(--acc);color:#fff;font-weight:700}
+.switch{position:relative;width:44px;height:24px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.sl{position:absolute;inset:0;background:#2a3550;border-radius:24px;cursor:pointer;transition:.2s}
+.sl:before{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s}
+.switch input:checked+.sl{background:var(--acc)}
+.switch input:checked+.sl:before{transform:translateX(20px)}
+.btn{display:block;width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:16px;font-weight:700;letter-spacing:4px;cursor:pointer;margin:4px 0 16px}
+.btn:active{transform:scale(.99)}
+.btn2{display:inline-block;padding:10px 18px;border:1px solid var(--acc);background:transparent;color:var(--acc2);border-radius:10px;font-size:13px;cursor:pointer;font-weight:700}
+.btn2:active{transform:scale(.98)}
+.linkbtn{background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;text-decoration:underline;padding:0}
+.result{display:none}
+.result.show{display:block;animation:fade .3s}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.big{text-align:center;padding:8px 0 16px}
+.big .lab{font-size:13px;color:var(--mut)}
+.big .val{font-size:44px;font-weight:800;color:var(--acc2);margin:6px 0}
+.big .sub{font-size:12px;color:var(--mut)}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--line)}
+.kv div{padding:12px 4px;border-bottom:1px solid var(--line);font-size:13px}
+.kv div span{color:var(--mut);display:block;font-size:11px;margin-bottom:4px}
+.kv div b{font-size:15px}
+.bar{height:10px;border-radius:6px;overflow:hidden;display:flex;margin-top:10px;background:#0f1626}
+.bar i{display:block;height:100%}
+.legend{display:flex;gap:16px;justify-content:center;font-size:12px;color:var(--mut);margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+.buyer{margin-top:16px;background:#0f1626;border:1px dashed var(--acc);border-radius:10px;padding:14px;text-align:center}
+.buyer .t{font-size:13px;color:var(--mut)}
+.buyer .v{font-size:30px;font-weight:800;color:var(--ok);margin-top:6px}
+.buyer .s{font-size:12px;color:var(--mut);margin-top:6px}
+.ratetable{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px}
+@media(max-width:560px){.ratetable{grid-template-columns:repeat(3,1fr)}}
+.rate{background:#0f1626;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}
+.rate b{display:block;font-size:14px;color:var(--acc2);margin-top:2px}
+.rate span{color:var(--mut)}
+.rateupd{font-size:11px;color:var(--mut);margin-top:8px;text-align:right}
+.faq h3{font-size:14px;margin:14px 0 6px;color:var(--acc2)}
+.faq p{font-size:13px;color:var(--mut);line-height:1.9}
+.faq .formula{background:#0f1626;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:14px;color:var(--txt);text-align:center;margin:10px 0}
+.sharebox{display:none;margin-top:14px;background:#0f1626;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:13px}
+.sharebox.show{display:block}
+.sharebox a{color:var(--blue);word-break:break-all}
+#toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%);background:#222b44;border:1px solid var(--acc);color:var(--txt);padding:10px 20px;border-radius:10px;font-size:13px;display:none;z-index:99}
+footer{text-align:center;color:var(--mut);font-size:11px;margin-top:24px;line-height:1.8}
+.note{font-size:11px;color:var(--mut);margin-top:8px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>VPS <span>剩余价值</span>计算器</h1>
+<p>VPS REMAINING VALUE CALCULATOR</p>
+</header>
+<div class="counters"><span>今日计算 <b id="cToday">--</b></span><span>累计计算 <b id="cTotal">--</b></span></div>
+
+<div class="card"><h2><span class="n">1</span>续费信息</h2>
+<div class="grid">
+<div class="field"><label>续费金额</label><input id="fAmount" type="number" min="0" step="0.01" placeholder="如 49.99"></div>
+<div class="field"><label>计价币种</label><select id="fCur"></select></div>
+<div class="field"><label>付款周期</label><select id="fCycle"><option value="30">月付</option><option value="90">季付</option><option value="180">半年付</option><option value="365" selected>年付</option><option value="730">两年付</option><option value="1095">三年付</option></select></div>
+<div class="field"><label>自定义汇率</label><div class="row"><label class="switch"><input type="checkbox" id="fCustomRate"><span class="sl"></span></label><input id="fRate" type="number" min="0" step="0.0001" placeholder="1 外币 = ? CNY" disabled style="flex:1"></div></div>
+</div>
+<div class="field mt"><label>厂商 / 型号（选填，仅展示）</label><input id="fVendor" placeholder="如 BandwagonHost / GIA"></div>
+</div>
+
+<div class="card"><h2><span class="n">2</span>时间信息</h2>
+<div class="grid">
+<div class="field"><label>交易日期</label><input id="fBuy" type="date"></div>
+<div class="field"><label>到期日期</label><div class="row"><input id="fExp" type="date" style="flex:1"><button class="linkbtn" id="autoExp" type="button">按周期推算</button></div></div>
+</div>
+<div class="row mt"><label class="switch"><input type="checkbox" id="fPrecise"><span class="sl"></span></label><span style="font-size:13px">精确到时分（按小时结算短周期机器）</span></div>
+</div>
+
+<div class="card"><h2><span class="n">3</span>交易结算</h2>
+<div class="field"><label>反推方向 <span class="note">（锁定一项输入，自动算出另一项）</span></label>
+<div class="seg" id="lockSeg"><button data-v="pay" class="on">锁定实付卖家 → 算溢价</button><button data-v="prem">锁定卖家溢价 → 算实付</button></div></div>
+<div class="grid mt">
+<div class="field"><label>实付卖家（CNY）</label><input id="fPay" type="number" min="0" step="0.01" placeholder="买家实际付给卖家的金额"></div>
+<div class="field"><label>卖家溢价（CNY，可为负即折价）</label><input id="fPrem" type="number" step="0.01" placeholder="0" readonly></div>
+</div>
+<div class="grid mt">
+<div class="field"><label>Push 手续费</label><div class="row"><input id="fPush" type="number" min="0" step="0.01" placeholder="0" style="flex:1"><select id="fPushCur" style="width:110px"></select></div></div>
+<div class="field"><label>Push 费分摊</label><div class="seg" id="pushSeg"><button data-v="buyer" class="on">买家付</button><button data-v="seller">卖家付</button><button data-v="aa">AA平摊</button></div></div>
+</div>
+<div class="row mt"><label class="switch"><input type="checkbox" id="fEscrow"><span class="sl"></span></label><span style="font-size:13px">中介担保（费率 5% × 实付卖家金额）</span>
+<div class="seg" id="escSeg" style="margin-left:8px"><button data-v="buyer" class="on">买家付</button><button data-v="seller">卖家付</button><button data-v="aa">AA平摊</button></div></div>
+</div>
+
+<button class="btn" id="calcBtn">开 始 计 算</button>
+
+<div class="card result" id="resultCard"><h2>📊 计算结果</h2>
+<div class="big"><div class="lab">VPS 剩余价值（CNY）</div><div class="val" id="rValue">¥ --</div><div class="sub" id="rValueSub"></div></div>
+<div class="kv">
+<div><span>剩余有效期</span><b id="rDays">--</b></div>
+<div><span>官方日均</span><b id="rOffDaily">--</b></div>
+<div><span>综合日均（买家口径）</span><b id="rMixDaily">--</b></div>
+<div><span>卖家溢价</span><b id="rPremium">--</b></div>
+<div><span>Push 手续费（折 CNY）</span><b id="rPush">--</b></div>
+<div><span>中介手续费</span><b id="rEscrow">--</b></div>
+<div><span>买家最终总支出</span><b id="rBuyer" style="color:var(--ok)">--</b></div>
+<div><span>卖家实际到手</span><b id="rSeller">--</b></div>
+</div>
+<div style="margin-top:14px;font-size:13px;color:var(--mut)">买家支出构成比例</div>
+<div class="bar"><i id="b1" style="background:#ea580c"></i><i id="b2" style="background:#f59e0b"></i><i id="b3" style="background:#38bdf8"></i></div>
+<div class="legend"><span><i style="background:#ea580c"></i>剩余价值</span><span><i style="background:#f59e0b"></i>溢价部分</span><span><i style="background:#38bdf8"></i>手续费部分</span></div>
+<div class="row mt" style="justify-content:center;gap:12px">
+<button class="btn2" id="shareLinkBtn">🔗 复制分享链接</button>
+<button class="btn2" id="shareImgBtn">🖼️ 生成分享图片</button>
+</div>
+<div class="sharebox" id="shareBox"></div>
+</div>
+
+<div class="card"><h2><span style="font-size:18px">💱</span>实时汇率（对 CNY）</h2>
+<div class="ratetable" id="rateTable"></div>
+<div class="rateupd" id="rateUpd">汇率加载中…</div>
+</div>
+
+<div class="card faq"><h2><span style="font-size:18px">❓</span>剩余价值怎么算？</h2>
+<div class="formula">剩余价值 = 续费金额 ÷ 付款周期天数 × 剩余天数 × 汇率</div>
+<p>在 VPS / 独服的二手交易里，买家真正买到的是「尚未使用的服务时长」。定价的基准不是原价，而是把续费价格按天摊平后，乘以从交易日到到期日的剩余天数。</p>
+<h3>溢价 = 实付卖家 − 剩余价值 − 卖家承担的费用</h3>
+<p>绝版促销价、可续费的低价年付、优质 IP 段、特殊线路（CN2 GIA、9929 等）都可能让机器实际价值高于纯剩余价值；接近到期、无法续费的机器出现折价（负溢价）也很正常。计算器支持双向反推：填实付金额自动算溢价，填溢价自动算应付金额。</p>
+<h3>费用分摊</h3>
+<p>中介担保费按实付卖家金额的 5% 计算；Push 手续费按所选币种实时汇率折算。两项费用均可选择买家付、卖家付或双方 AA 平摊，买家总支出与卖家到手金额会实时重算。</p>
+<h3>数据会被上传吗？</h3>
+<p>不会保存你的交易数据，金额日期只在浏览器内计算。点击「复制分享链接」会把当前参数写进 URL；「生成分享图片」会把本次结果渲染成一张图片并生成长期有效的图片链接，方便发给交易对方核对。</p>
+</div>
+
+<footer>汇率来自 Frankfurter 开放接口 · 计算结果仅供参考<br>部署于 Cloudflare Workers · 交易数据不出浏览器</footer>
+</div>
+<div id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const fmt=n=>'¥ '+Number(n).toFixed(2);
+const CURS=[['USD','美元'],['CNY','人民币'],['EUR','欧元'],['GBP','英镑'],['JPY','日元'],['HKD','港币'],['TWD','新台币'],['CAD','加元'],['KRW','韩元'],['SGD','新加坡元'],['AUD','澳元']];
+let rates={CNY:1}, rateTime=null, lockMode='pay', pushShare='buyer', escShare='buyer', expTouched=false, lastResult=null;
+CURS.forEach(([c,n])=>{const o=document.createElement('option');o.value=c;o.textContent=c+' · '+n;$('fCur').appendChild(o);const p=o.cloneNode(true);$('fPushCur').appendChild(p);});
+$('fPushCur').value='CNY';
+function segInit(id,cb){const el=$(id);el.querySelectorAll('button').forEach(b=>b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');cb(b.dataset.v);});}
+segInit('lockSeg',v=>{lockMode=v;$('fPay').readOnly=(v==='prem');$('fPrem').readOnly=(v==='pay');});
+segInit('pushSeg',v=>pushShare=v);
+segInit('escSeg',v=>escShare=v);
+$('fCustomRate').onchange=e=>{$('fRate').disabled=!e.target.checked;};
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2000);}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function setBuyExp(){const b=$('fBuy'),e=$('fExp');if($('fPrecise').checked){b.type='datetime-local';e.type='datetime-local';}else{b.type='date';e.type='date';b.value=b.value.slice(0,10);e.value=e.value.slice(0,10);}}
+$('fPrecise').onchange=()=>{setBuyExp();expTouched=false;autoExp();};
+function autoExp(){if(expTouched)return;const cyc=parseInt($('fCycle').value);const b=$('fBuy').value;if(!b)return;const d=new Date($('fPrecise').checked?b:b+'T00:00:00');d.setDate(d.getDate()+cyc);$('fExp').value=$('fPrecise').checked?d.toISOString().slice(0,16):d.toISOString().slice(0,10);}
+$('fCycle').onchange=autoExp;$('fBuy').onchange=()=>{expTouched=false;autoExp();};
+$('fExp').addEventListener('input',()=>expTouched=true);
+$('autoExp').onclick=()=>{expTouched=false;autoExp();toast('已按付款周期推算到期日');};
+(function init(){$('fBuy').value=todayStr();autoExp();})();
+async function loadRates(){
+  const render=()=>{const tb=$('rateTable');tb.innerHTML='';CURS.forEach(([c,n])=>{if(c==='CNY')return;const d=document.createElement('div');d.className='rate';d.innerHTML='<span>'+c+' '+n+'</span><b>'+(rates[c]?rates[c].toFixed(3):'--')+'</b>';tb.appendChild(d);});$('rateUpd').textContent=rateTime?('更新于 '+rateTime+' · Frankfurter'):'汇率加载失败，可开启自定义汇率';};
+  try{
+    const r=await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=CNY,EUR,GBP,JPY,HKD,TWD,CAD,KRW,SGD,AUD',{cache:'no-store'});
+    const j=await r.json();const cny=j.rates.CNY;
+    ['EUR','GBP','JPY','HKD','TWD','CAD','KRW','SGD','AUD'].forEach(c=>{if(j.rates[c])rates[c]=cny/j.rates[c];});
+    rates.USD=cny;rateTime=j.date;localStorage.setItem('vpsRates',JSON.stringify({t:j.date,r:rates}));render();
+  }catch(e){
+    try{const c=JSON.parse(localStorage.getItem('vpsRates')||'null');if(c&&c.r&&c.r.USD){rates=c.r;rateTime=c.t+'（缓存）';}}catch(_){}
+    render();
+  }
+}
+async function refreshCount(){try{const r=await fetch('/api/count',{cache:'no-store'});const j=await r.json();$('cToday').textContent=j.today;$('cTotal').textContent=j.total;}catch(e){}}
+function shareFactor(v){return v==='buyer'?[1,0]:v==='seller'?[0,1]:[0.5,0.5];}
+function calc(){
+  const amount=parseFloat($('fAmount').value);
+  const cur=$('fCur').value, cycle=parseInt($('fCycle').value);
+  const precise=$('fPrecise').checked;
+  const buyV=$('fBuy').value, expV=$('fExp').value;
+  if(!(amount>0)){toast('请填写续费金额');return null;}
+  if(!buyV||!expV){toast('请选择交易日期和到期日期');return null;}
+  const buy=new Date(precise?buyV:buyV+'T00:00:00'), exp=new Date(precise?expV:expV+'T00:00:00');
+  let days=(exp-buy)/86400000; if(!precise)days=Math.round(days);
+  if(!(days>0)){toast('到期时间必须晚于交易时间');return null;}
+  let rate=1;
+  if(cur!=='CNY'){
+    if($('fCustomRate').checked){const m=parseFloat($('fRate').value);if(!(m>0)){toast('请填写自定义汇率');return null;}rate=m;}
+    else if(rates[cur])rate=rates[cur];
+    else{toast('汇率获取失败，请开启自定义汇率');return null;}
+  }
+  const renewalCNY=amount*rate, offDaily=renewalCNY/cycle, V=offDaily*days;
+  const pushAmt=parseFloat($('fPush').value)||0;
+  const pushRate=$('fPushCur').value==='CNY'?1:(rates[$('fPushCur').value]||0);
+  if(pushAmt>0&&!pushRate){toast('Push 费币种汇率缺失');return null;}
+  const pushCNY=pushAmt*pushRate;
+  const [pb,ps]=shareFactor(pushShare);
+  const escOn=$('fEscrow').checked, [eb,es]=shareFactor(escShare);
+  let P, premium;
+  if(lockMode==='pay'){
+    P=parseFloat($('fPay').value); if(!(P>=0)){toast('请填写实付卖家金额');return null;}
+    const escTotal=escOn?P*0.05:0;
+    premium=P-V-pushCNY*ps-escTotal*es;
+  }else{
+    premium=parseFloat($('fPrem').value); if(isNaN(premium)){toast('请填写卖家溢价');return null;}
+    const denom=1-(escOn?0.05*es:0);
+    P=(V+premium+pushCNY*ps)/denom;
+  }
+  const escTotal=escOn?P*0.05:0;
+  const buyerTotal=P+pushCNY*pb+escTotal*eb;
+  const sellerNet=P-pushCNY*ps-escTotal*es;
+  const mixDaily=buyerTotal/days;
+  return {V,days,offDaily,premium,pushCNY,escTotal,buyerTotal,sellerNet,mixDaily,P,cur,rate,buyV,expV,precise};
+}
+function render(r){
+  $('rValue').textContent=fmt(r.V);
+  $('rValueSub').textContent='折合 '+(r.cur==='CNY'?'--':(r.V/r.rate).toFixed(2)+' '+r.cur)+' · 1 '+r.cur+' = '+r.rate.toFixed(4)+' CNY'+($('fVendor').value?' · '+$('fVendor').value:'');
+  $('rDays').textContent=(r.precise?r.days.toFixed(1):Math.round(r.days))+' 天';
+  $('rOffDaily').textContent=fmt(r.offDaily);
+  $('rMixDaily').textContent=fmt(r.mixDaily);
+  $('rPremium').textContent=fmt(r.premium)+(r.premium<0?'（折价）':'');
+  $('rPush').textContent=fmt(r.pushCNY);
+  $('rEscrow').textContent=fmt(r.escTotal);
+  $('rBuyer').textContent=fmt(r.buyerTotal);
+  $('rSeller').textContent=fmt(r.sellerNet);
+  if(lockMode==='pay')$('fPrem').value=r.premium.toFixed(2);else $('fPay').value=r.P.toFixed(2);
+  const tot=r.buyerTotal||1;
+  $('b1').style.width=(r.V/tot*100)+'%';
+  $('b2').style.width=(Math.max(r.premium,0)/tot*100)+'%';
+  $('b3').style.width=((r.pushCNY+r.escTotal)/tot*100)+'%';
+  $('resultCard').classList.add('show');
+  lastResult=r;
+}
+$('calcBtn').onclick=async()=>{
+  const r=calc(); if(!r)return; render(r);
+  $('resultCard').scrollIntoView({behavior:'smooth',block:'start'});
+  try{const q=await fetch('/api/count',{method:'POST'});const j=await q.json();$('cToday').textContent=j.today;$('cTotal').textContent=j.total;}catch(e){}
+};
+function shareParams(){
+  const p={a:$('fAmount').value,cur:$('fCur').value,cyc:$('fCycle').value,buy:$('fBuy').value,exp:$('fExp').value,ph:$('fPrecise').checked?1:0,mode:lockMode,pay:$('fPay').value,prem:$('fPrem').value,push:$('fPush').value,pcur:$('fPushCur').value,psh:pushShare,esc:$('fEscrow').checked?1:0,esh:escShare,cr:$('fCustomRate').checked?1:0,rate:$('fRate').value,v:$('fVendor').value};
+  return new URLSearchParams(p).toString();
+}
+$('shareLinkBtn').onclick=async()=>{
+  if(!lastResult){toast('请先计算一次');return;}
+  const url=location.origin+location.pathname+'#'+shareParams();
+  try{await navigator.clipboard.writeText(url);toast('分享链接已复制');}
+  catch(e){prompt('复制下面的链接：',url);}
+};
+$('shareImgBtn').onclick=async()=>{
+  if(!lastResult){toast('请先计算一次');return;}
+  const r=lastResult;toast('正在生成图片…');
+  const cyc=parseInt($('fCycle').value);
+  const cycLabel=$('fCycle').selectedOptions[0].textContent;
+  const amount=parseFloat($('fAmount').value);
+  const cur=$('fCur').value;
+  const th=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  try{
+    const q=await fetch('/api/share',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
+      v:th(r.V), days:String(r.precise?r.days.toFixed(1):Math.round(r.days)),
+      cyc:String(cyc), pct:Math.min(100,r.days/cyc*100).toFixed(1),
+      amount:th(amount), cur:cur, cycLabel:cycLabel,
+      rate:cur==='CNY'?'1':r.rate.toFixed(4),
+      pay:th(r.P), prem:(r.premium<0?'-':'+')+th(Math.abs(r.premium)), buyer:th(r.buyerTotal),
+      buy:r.buyV.slice(0,10), exp:r.expV.slice(0,10),
+      rateDate:(rateTime||'').slice(0,10)
+    })});
+    const j=await q.json();
+    if(!j.id)throw 0;
+    const url=location.origin+'/s/'+j.id;
+    const box=$('shareBox');box.classList.add('show');
+    box.innerHTML='图片链接（30天有效）：<br><a href="'+url+'" target="_blank">'+url+'</a>';
+    await navigator.clipboard.writeText(url);toast('图片链接已复制');
+  }catch(e){toast('生成失败，请稍后重试');}
+};
+(function fromHash(){
+  if(!location.hash||location.hash.length<3)return;
+  try{
+    const p=new URLSearchParams(location.hash.slice(1));
+    const set=(id,v)=>{if(v!==undefined&&v!==null&&v!=='')$(id).value=v;};
+    set('fAmount',p.get('a'));set('fCur',p.get('cur'));set('fCycle',p.get('cyc'));
+    if(p.get('ph')==='1'){$('fPrecise').checked=true;setBuyExp();}
+    set('fBuy',p.get('buy'));set('fExp',p.get('exp'));expTouched=true;
+    if(p.get('mode')==='prem'){document.querySelector('#lockSeg button[data-v=prem]').click();}
+    set('fPay',p.get('pay'));set('fPrem',p.get('prem'));
+    set('fPush',p.get('push'));set('fPushCur',p.get('pcur'));
+    const seg=(id,v)=>{const b=document.querySelector('#'+id+' button[data-v='+v+']');if(b)b.click();};
+    seg('pushSeg',p.get('psh'));seg('escSeg',p.get('esh'));
+    if(p.get('esc')==='1')$('fEscrow').checked=true;
+    if(p.get('cr')==='1'){$('fCustomRate').checked=true;$('fRate').disabled=false;}
+    set('fRate',p.get('rate'));set('fVendor',p.get('v'));
+    setTimeout(()=>{const r=calc();if(r)render(r);},600);
+  }catch(e){}
+})();
+loadRates();refreshCount();
+</script>
+</body>
+</html>
